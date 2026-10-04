@@ -1,0 +1,13 @@
+# Private TLS keys — NEVER commit
+*.key
+*.pem
+
+# macOS
+.DS_Store
+
+# Nginx/runtime files
+*.pid
+*.log
+
+# Temporary/cache files
+/tmp/

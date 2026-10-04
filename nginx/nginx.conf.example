@@ -1,0 +1,79 @@
+worker_processes 1;
+
+error_log /tmp/cn-nginx-error.log;
+pid /tmp/cn-nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    access_log /tmp/cn-nginx-access.log;
+
+    proxy_cache_path /tmp/cn-nginx-cache
+        levels=1:2
+        keys_zone=cncache:10m
+        max_size=100m
+        inactive=60s
+        use_temp_path=off;
+
+    upstream backends {
+        server 10.7.10.56:3001;
+        server 10.7.10.56:3002;
+    }
+
+    server {
+        listen 8080;
+        server_name app.team07.test;
+
+        location = /api/status {
+            proxy_cache cncache;
+            proxy_cache_valid 200 60s;
+            add_header X-Cache-Status $upstream_cache_status always;
+
+            proxy_pass http://backends;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location / {
+            proxy_pass http://backends;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+
+    server {
+        listen 8443 ssl;
+        server_name app.team07.test;
+
+        # Replace these paths with the actual certificate locations
+        # on the machine running Nginx.
+        ssl_certificate /path/to/app.team07.test.crt;
+        ssl_certificate_key /path/to/app.team07.test.key;
+
+        location = /api/status {
+            proxy_cache cncache;
+            proxy_cache_valid 200 60s;
+            add_header X-Cache-Status $upstream_cache_status always;
+
+            proxy_pass http://backends;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location / {
+            proxy_pass http://backends;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+    }
+}

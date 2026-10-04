@@ -1,0 +1,6 @@
+interface=en0
+listen-address=127.0.0.1,10.7.23.53
+bind-interfaces
+
+address=/app.team07.test/10.7.10.60
+address=/api.team07.test/10.7.10.60
