@@ -2,16 +2,16 @@
 
 ## Team
 
-- **Team:** Team 07
+- **Team:** RAD
 - **Infrastructure:** Type 2 — 2–3 Macs with combined roles
 
 ### Members
 
 | Name | Enrollment Number |
 |---|---|
-| TODO | TODO |
-| TODO | TODO |
-| TODO | TODO |
+| Divyansh Rathore | 2401020021 |
+| Arya Pandey | 2401020012 |
+| Rishita Boisnobi | 2401010382 |
 
 ## Architecture
 
