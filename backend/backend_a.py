@@ -48,6 +48,6 @@ class BackendAHandler(BaseHTTPRequestHandler):
 
 server = HTTPServer(("0.0.0.0", 3001), BackendAHandler)
 
-print("Backend A running on 10.7.10.56:3001")
+print("Backend A listening on 0.0.0.0:3001")
 
 server.serve_forever()

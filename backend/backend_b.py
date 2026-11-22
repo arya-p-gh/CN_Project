@@ -47,6 +47,6 @@ class BackendBHandler(BaseHTTPRequestHandler):
 
 server = HTTPServer(("0.0.0.0", 3002), BackendBHandler)
 
-print("Backend B running on 10.7.10.56:3002")
+print("Backend B listening on 0.0.0.0:3002")
 
 server.serve_forever()
