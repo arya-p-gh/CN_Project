@@ -1,93 +1,58 @@
-# Team 07 — DNS Server
+# Team 07 - DNS
 
-## Role
+## Servers
 
-Mac 1 is the DNS server for Team 07.
+| | Machine | IP | Config |
+|---|---|---|---|
+| Primary | Mac 1 | `10.7.30.40` | `dns/dnsmasq-primary.conf` |
+| Backup (Phase 2, Ext A) | Mac 3 | `10.7.30.100` | `dns/dnsmasq-backup.conf` |
 
-- Host: Mac 1
-- IP address: `10.7.23.53`
-- Network interface: `en0`
-- DNS software: `dnsmasq`
-- DNS port: `53`
+Both run dnsmasq 2.93 (Homebrew) on port 53 UDP/TCP, interface `en0`, with identical records.
+`dnsmasq.conf.example` is the Phase 1 config, kept for comparison.
 
-## DNS Records
+## Records
 
-The DNS server resolves the Team 07 test domains to the Edge/Nginx server on Mac 2.
+| Name | Type | Value | TTL |
+|---|---|---|---|
+| `app.team07.test` | A | `10.7.20.12` (Mac 2, edge) | 30 s |
+| `api.team07.test` | A | `10.7.20.12` (Mac 2, edge) | 30 s |
 
-| Domain | IP address | Purpose |
-|---|---|---|
-| `app.team07.test` | `10.7.10.60` | Application / Edge server |
-| `api.team07.test` | `10.7.10.60` | API / Edge server |
+### Changes from Phase 1
+- **`address=` → `host-record=...,30`.** Phase 1 answers came back with TTL 0, which made the
+  TTL demo (Ext B) impossible. Now every answer carries an explicit 30 s TTL.
+- **`local=/team07.test/`.** Names under our domain are never forwarded to the internet.
+- **`no-resolv` + `server=1.1.1.1/8.8.8.8`.** The DNS Macs also use themselves as resolvers, so
+  reading `/etc/resolv.conf` would make dnsmasq forward to itself.
+- **`log-queries`.** We run dnsmasq in the foreground (`-k`) so you can watch queries arrive live.
 
-## Configuration
+## Running
 
-The example configuration is stored in:
+```bash
+sudo /opt/homebrew/sbin/dnsmasq --test -C ~/cn/dnsmasq.conf      # syntax check
+sudo /opt/homebrew/sbin/dnsmasq -k -C ~/cn/dnsmasq.conf --log-facility=-
+```
 
-`dns/dnsmasq.conf.example`
+To stop it, run `sudo killall dnsmasq` from another tab. dnsmasq ignores Ctrl+C, because it
+uses SIGINT internally. After changing a `host-record`, you need to restart it; SIGHUP only
+re-reads `/etc/hosts`.
 
-The active dnsmasq configuration uses:
+## Client configuration (Mac 1 and Mac 2)
 
-```text
-interface=en0
-listen-address=127.0.0.1,10.7.23.53
-bind-interfaces
+```bash
+sudo networksetup -setdnsservers Wi-Fi 10.7.30.40 10.7.30.100   # primary, then backup
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+scutil --dns | grep nameserver
+```
 
-address=/app.team07.test/10.7.10.60
-address=/api.team07.test/10.7.10.60
+To undo it: `sudo networksetup -setdnsservers Wi-Fi Empty`
 
+## Tests
 
-## Configuration Validation
+```bash
+dig @10.7.30.40  app.team07.test     # primary  -> 30 IN A 10.7.20.12, flags: qr aa
+dig @10.7.30.100 app.team07.test     # backup   -> same
+dig app.team07.test                  # system resolver, SERVER: 10.7.30.40
+```
 
-The dnsmasq configuration was checked with:
-
-sudo /opt/homebrew/sbin/dnsmasq --test -C /opt/homebrew/etc/dnsmasq.conf
-
-Result:
-
-dnsmasq: syntax check OK.
-
-## DNS Service
-
-The DNS service was verified with:
-
-sudo lsof -nP -iUDP:53 -iTCP:53
-
-The service is listening on:
-
-10.7.23.53:53
-
-for both UDP and TCP.
-
-It also listens locally on:
-
-127.0.0.1:53
-
-## DNS Resolution Tests
-
-The app.team07.test record was tested directly against the Team 07 DNS server:
-
-dig @10.7.23.53 app.team07.test
-
-Expected result:
-
-status: NOERROR
-
-ANSWER SECTION:
-app.team07.test. 0 IN A 10.7.10.60
-
-SERVER: 10.7.23.53#53(10.7.23.53)
-
-The api.team07.test record was tested with:
-
-dig @10.7.23.53 api.team07.test
-
-Expected result:
-
-status: NOERROR
-
-ANSWER SECTION:
-api.team07.test. 0 IN A 10.7.10.60
-
-SERVER: 10.7.23.53#53(10.7.23.53)
-
-These tests confirm that Mac 1 resolves both Team 07 domains to Mac 2 (10.7.10.60).
+`dig` talks to the server directly and skips the macOS cache. To see what the OS (and
+therefore curl and Safari) has cached, use `dscacheutil -q host -a name app.team07.test`.
