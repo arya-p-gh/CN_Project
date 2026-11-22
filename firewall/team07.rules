@@ -1,0 +1,7 @@
+# Team 07 service isolation (Mac 3, Extension C)
+# Only the edge (Mac 2, 10.7.20.12) and localhost may reach the backends.
+# Appended after the stock /etc/pf.conf. "quick" means the first match wins, so the pass rules come first.
+
+pass  in quick on lo0 proto tcp from any to any port { 3001, 3002 }
+pass  in quick proto tcp from 10.7.20.12 to any port { 3001, 3002 }
+block drop in quick proto tcp from any to any port { 3001, 3002 }
