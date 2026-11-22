@@ -33,6 +33,10 @@
 
 ## Still to capture before the final review
 
+First fix the CA on Mac 1 (new CA fingerprint ends `67:93:55:35`) and the server cert on Mac 3
+(ends `71:5E:E1`). Then run `zsh scripts/mac1_evidence.sh` on Mac 1. It walks through the steps
+below and saves the output to `evidence/rerun/`.
+
 - [ ] Ext D: curl loop showing **only `x-backend: B`** while Backend A is stopped, then A/B again after the restart
 - [ ] Ext D: nginx error log line `connect() failed (61: Connection refused) ... 10.7.30.100:3001`
 - [ ] Ext C: `sudo pfctl -sr | grep -E '3001|3002'` (rules loaded)

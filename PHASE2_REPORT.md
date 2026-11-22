@@ -101,11 +101,12 @@ Evidence: `evidence/phase2/extB_*`
 |---|---|
 | Mac 1 (client) | `Operation timed out` (both ports) |
 | Mac 2 (edge) | `succeeded` (both ports) |
-| Mac 1 → `https://app.team07.test:8443` | still served through the edge |
+| Mac 1 → `https://app.team07.test:8443` | *to be re-captured*: during the run Mac 1 still trusted the old CA, so its HTTPS requests failed at TLS (finding #3) |
 | Mac 1, after `pfctl -f /etc/pf.conf; pfctl -d` | `succeeded` again (rollback works) |
 
-**Result: pass.** The backends are only reachable through the edge, the way a private subnet
-with a security group would work. We use `drop` rather than `return`, so a blocked client gets a
+**Result: isolation and rollback confirmed.** The backends are only reachable from the edge, the
+way a private subnet with a security group would work. Showing the site still working through
+the edge from a client is pending the re-run. We use `drop` rather than `return`, so a blocked client gets a
 timeout and learns nothing.
 
 Evidence: `evidence/phase2/extC_*`
@@ -115,14 +116,17 @@ Evidence: `evidence/phase2/extC_*`
 **Config.** `max_fails=1 fail_timeout=10s` on both upstream servers, plus `proxy_next_upstream error timeout http_502 http_503`.
 
 **Test.**
-- Before: requests alternated A/B, and the access log showed `-> 10.7.30.100:3001` and `-> 10.7.30.100:3002` in turn.
-- We stopped Backend A on Mac 3. Every request then returned **200 with `X-Backend: B`**. The
-  request that hit A first failed with connection refused, nginx retried it on B, and the client
-  never saw an error.
-- We restarted A. After the 10 s `fail_timeout`, nginx tried A again and the A/B alternation came back.
+- Before: requests alternated A/B, and the access log showed `-> 10.7.30.100:3001` and `-> 10.7.30.100:3002` in turn (screenshot).
+- Stop Backend A on Mac 3, then loop requests from a client. Expected: every request returns
+  **200 with `X-Backend: B`**. The request that hits A first fails with connection refused, nginx
+  retries it on B, and the client never sees an error.
+- Restart A. After the 10 s `fail_timeout`, nginx should try A again and the A/B alternation should come back.
 
-**Result: pass.** These are passive health checks: nginx notices failures on real traffic
-rather than probing.
+**Status: re-run pending.** Our first attempt was from Mac 1 while it still trusted the old CA
+(finding #3), so the client loop failed at TLS and produced no output. We'll re-capture this from
+a client that trusts the new CA.
+
+These are passive health checks: nginx notices failures on real traffic rather than probing.
 
 **Remaining single point of failure:** the nginx edge on Mac 2. If Mac 2 goes down, both healthy
 backends become unreachable, because DNS points only at Mac 2. Ways to fix it:
@@ -147,8 +151,7 @@ primary changes, a client that fails over to the backup gets sent to the old edg
 **Observed on Mac 1 (23:29:41 to 23:30:28):** every request returned `x-edge: mac3-standby` and `connected-to=10.7.30.100`.
 The pf firewall stayed on the whole time, and the standby reached the backends over lo0.
 
-**Migrate back.** We restored the record to `10.7.20.12` on both servers and flushed the
-client, which was back on `mac2-primary`.
+**Migrate back.** We restored the record to `10.7.20.12` on both servers and flushed the client.
 
 **Result: pass.** Traffic moved to a different edge machine without touching any client
 config. Only the DNS answer changed. The old edge has to keep running for at least one TTL after
@@ -190,9 +193,14 @@ For the faculty-injected fault, we work bottom-up and say what each step rules o
    - The nginx error log on Mac 2 showed `SSL_do_handshake() failed ... tlsv1 alert unknown ca ... client: 10.7.30.40`.
 
    So the *client* was rejecting our certificate. Comparing SHA-256 fingerprints showed that
-   `~/cn/tls/team07-ca.crt` on Mac 1 was the **old Phase 1 CA**. AirDrop had saved the new file
-   as `team07-ca 2.crt`, because the old name already existed. Copying and trusting the correct
-   file fixed it. Lesson: verify certificates by fingerprint, not by filename.
+   `~/cn/tls/team07-ca.crt` on Mac 1 was the **old Phase 1 CA** (`...8C:9D:E4:9B`), not the new
+   one (`...67:93:55:35`). The new file had never reached Mac 1's `~/cn/tls`, and re-running
+   `add-trusted-cert` only trusted the old CA again.
+
+   A side effect gave it away: the standby edge on Mac 3 *did* verify from Mac 1. That only
+   makes sense if Mac 3 was also serving a certificate signed by the old CA. Fix: copy the new
+   CA to Mac 1 and the new server cert to Mac 3, and check both by fingerprint before trusting
+   or loading them. Lesson: verify certificates by fingerprint, not by filename.
 
 4. **`dig` vs the OS cache.** `dig` always shows the server's current answer, so it can't
    demonstrate client-side caching. For the TTL demo we used `dscacheutil -q host`, which goes
@@ -225,7 +233,7 @@ blocked. Keeping a backup of `/etc/pf.conf` and a one-line rollback made it safe
 with.
 
 **Ext D (HA failover).** With passive health checks and `proxy_next_upstream`, losing one
-backend was invisible to clients. It also made it obvious that redundancy at one layer doesn't
+backend should be invisible to clients, because the failed request is simply retried on the healthy one. It also made it obvious that redundancy at one layer doesn't
 help if another layer (our single nginx edge) has no redundancy.
 
 **Ext E (edge migration).** You can move a whole service to new hardware by changing one DNS
