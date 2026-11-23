@@ -1,11 +1,17 @@
 # shared bits for mac1.sh / mac2.sh / mac3.sh  (sourced, not run directly)
 
-MAC1=10.7.30.40      # Arya     - primary DNS + client
-MAC2=10.7.20.12      # Divyansh - nginx edge
-MAC3=10.7.30.100     # Rishita  - backends, backup DNS, firewall, standby edge
+# IPs written in the repo configs (the 23 Nov network)
+REPO_MAC1=10.7.30.40      # Arya     - primary DNS + client
+REPO_MAC2=10.7.20.12      # Divyansh - nginx edge
+REPO_MAC3=10.7.30.100     # Rishita  - backends, backup DNS, firewall, standby edge
 URL=https://app.team07.test:8443
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 CN=~/cn
+IPFILE=$CN/ips
+
+# today's IPs: ~/cn/ips (written by "<macN.sh> ips ...") wins over the repo ones
+MAC1=$REPO_MAC1; MAC2=$REPO_MAC2; MAC3=$REPO_MAC3
+[[ -f $IPFILE ]] && source $IPFILE
 DNSMASQ=/opt/homebrew/sbin/dnsmasq
 DNSLOG=/tmp/cn-dnsmasq.log
 
@@ -16,13 +22,37 @@ info() { print -P "%F{cyan}›%f $*"; }
 check_ip() {   # warn if this Mac's IP is not the one the configs expect
   local want=$1 have=$(ipconfig getifaddr en0)
   if [[ "$have" == "$want" ]]; then ok "this Mac is $have"
-  else bad "this Mac is '$have' but the configs expect $want - tell the team before going on"; fi
+  else
+    bad "this Mac is '$have' but the configs expect $want"
+    info "IPs changed? everyone runs:  zsh scripts/macN.sh ips <mac1-ip> <mac2-ip> <mac3-ip>   then start again"
+    exit 1
+  fi
 }
 
-dns_conf_install() {  # $1 = primary|backup ; creates ~/cn/dnsmasq.conf from the repo if missing
+set_ips() {   # ips <mac1> <mac2> <mac3>  - save today's IPs on this Mac
+  if [[ $# -ne 3 ]]; then
+    info "this Mac's IP now: $(ipconfig getifaddr en0)"
+    info "using: Mac 1 $MAC1   Mac 2 $MAC2   Mac 3 $MAC3   $([[ -f $IPFILE ]] && echo "(from $IPFILE)" || echo "(repo defaults)")"
+    info "to change:  ips <mac1-ip> <mac2-ip> <mac3-ip>     to go back to the repo IPs:  ips reset"
+    [[ $1 == reset ]] && { rm -f $IPFILE; ok "removed $IPFILE - back to repo IPs"; }
+    return
+  fi
+  local ip; for ip in "$@"; do [[ $ip =~ '^([0-9]{1,3}\.){3}[0-9]{1,3}$' ]] || { bad "'$ip' is not an IPv4 address"; return 1; }; done
   mkdir -p $CN
-  [[ -f $CN/dnsmasq.conf ]] || { cp "$REPO/dns/dnsmasq-$1.conf" $CN/dnsmasq.conf; info "installed $CN/dnsmasq.conf from repo"; }
+  printf 'MAC1=%s\nMAC2=%s\nMAC3=%s\n' "$@" > $IPFILE
+  ok "saved to $IPFILE:  Mac 1 $1   Mac 2 $2   Mac 3 $3"
+  info "now run start again - it rebuilds the configs in $CN with these IPs"
 }
+
+render() {   # render <repo file> <dest> : copy a repo config, swap in today's IPs and $HOME
+  mkdir -p "$(dirname $2)"
+  [[ -f $2 ]] && cp $2 $2.prev
+  sed -e "s/${REPO_MAC1//./\\.}/@MAC1@/g" -e "s/${REPO_MAC2//./\\.}/@MAC2@/g" -e "s/${REPO_MAC3//./\\.}/@MAC3@/g" \
+      -e "s/@MAC1@/$MAC1/g" -e "s/@MAC2@/$MAC2/g" -e "s/@MAC3@/$MAC3/g" -e "s|HOME_DIR|$HOME|g" "$1" > $2
+  info "built $2 from $(basename $1)"
+}
+
+dns_conf_install() { render "$REPO/dns/dnsmasq-$1.conf" $CN/dnsmasq.conf; }   # $1 = primary|backup
 
 dns_start() {
   sudo killall dnsmasq 2>/dev/null; sleep 1

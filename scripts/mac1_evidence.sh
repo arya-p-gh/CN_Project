@@ -5,7 +5,7 @@
 #
 # usage:  zsh scripts/mac1_evidence.sh
 
-URL=https://app.team07.test:8443
+source "$(dirname "$0")/common.sh"   # URL and today's MAC2 / MAC3
 OUT="$(cd "$(dirname "$0")/.." && pwd)/evidence/rerun/$(date +%Y%m%d_%H%M)"
 mkdir -p "$OUT"
 
@@ -25,7 +25,7 @@ fi
 echo "ok"
 
 step "1. LAN + DNS"
-{ ipconfig getifaddr en0; ping -c 3 10.7.20.12; ping -c 3 10.7.30.100; } | tee "$OUT/1_lan.txt"
+{ ipconfig getifaddr en0; ping -c 3 $MAC2; ping -c 3 $MAC3; } | tee "$OUT/1_lan.txt"
 { dig app.team07.test; dig api.team07.test; scutil --dns | grep nameserver | head -2; } | tee "$OUT/1_dns.txt"
 
 step "2. HTTPS / TLS"
@@ -45,7 +45,7 @@ curl -sI -H "If-None-Match: $ETAG" "$URL/api/status" | tee "$OUT/4c_conditional.
 
 step "5. Ext C - firewall"
 pause "Mac 3: load + enable pf (firewall/README.md 'Apply'), then run: sudo pfctl -sr | grep -E '3001|3002'  (screenshot it)"
-{ nc -vz -G 3 10.7.30.100 3001; nc -vz -G 3 10.7.30.100 3002; } 2>&1 | tee "$OUT/5a_client_blocked.txt"
+{ nc -vz -G 3 $MAC3 3001; nc -vz -G 3 $MAC3 3002; } 2>&1 | tee "$OUT/5a_client_blocked.txt"
 echo "site through the edge:"; lb | tee "$OUT/5b_site_still_works.txt"
 
 step "6. Ext D - HA failover"
@@ -57,19 +57,19 @@ lb | tee "$OUT/6b_recovered.txt"
 
 step "7. Ext E - edge migration"
 pause "Mac 3: make sure standby nginx is running (nginx -c ~/cn/nginx-standby.conf)"
-curl -s -D - -o /dev/null --resolve app.team07.test:8443:10.7.30.100 "$URL/" | grep -iE "HTTP/|x-edge" | tee "$OUT/7a_standby_direct.txt"
+curl -s -D - -o /dev/null --resolve app.team07.test:8443:$MAC3 "$URL/" | grep -iE "HTTP/|x-edge" | tee "$OUT/7a_standby_direct.txt"
 echo "warming the cache with the current edge:"
 sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
 curl -s -D - -o /dev/null "$URL/" | grep -i x-edge | tee "$OUT/7b_before.txt"
-pause "QUICKLY: change app.team07.test to 10.7.30.100 on BOTH DNS servers (Mac 1 + Mac 3) and restart both dnsmasq"
+pause "QUICKLY: change app.team07.test to $MAC3 on BOTH DNS servers (Mac 1 + Mac 3) and restart both dnsmasq"
 for i in $(seq 1 12); do echo -n "$(date +%T)  "; curl -s -o /dev/null -D - -w "connected-to=%{remote_ip}\n" "$URL/" | grep -iE "x-edge|connected-to" | tr -d '\r' | tr '\n' ' '; echo; sleep 5; done | tee "$OUT/7c_cutover.txt"
-pause "change the record back to 10.7.20.12 on BOTH DNS servers and restart both dnsmasq"
+pause "change the record back to $MAC2 on BOTH DNS servers and restart both dnsmasq"
 sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
 curl -s -D - -o /dev/null "$URL/" | grep -i x-edge | tee "$OUT/7d_back.txt"
 
 step "8. cleanup reminder"
 echo "Mac 3: nginx -s stop -c ~/cn/nginx-standby.conf ; sudo pfctl -f /etc/pf.conf ; sudo pfctl -d"
 pause "after the rollback"
-nc -vz -G 3 10.7.30.100 3001 2>&1 | tee "$OUT/8_after_rollback.txt"
+nc -vz -G 3 $MAC3 3001 2>&1 | tee "$OUT/8_after_rollback.txt"
 
 echo; echo "done -> $OUT"

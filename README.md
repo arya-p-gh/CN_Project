@@ -26,6 +26,14 @@ All three Macs are on the same Wi-Fi, subnet `10.7.0.0/19` (mask `255.255.224.0`
 
 The IPs changed from Phase 1 (`10.7.23.53` / `10.7.10.60` / `10.7.10.56`) because we rebuilt on a new day's DHCP leases.
 
+**If the IPs change again** (new DHCP lease on demo day): each Mac runs `ipconfig getifaddr en0` and shares its IP with the others. Then all three run the same line with their own script:
+
+```bash
+zsh scripts/mac1.sh ips <mac1-ip> <mac2-ip> <mac3-ip>    # mac2.sh / mac3.sh on the other two
+```
+
+This saves the IPs to `~/cn/ips` on that Mac, outside the repo. The next `start` rebuilds `~/cn/` from the repo configs with those IPs swapped in: the DNS listen address and A records, the nginx upstream, and the pf allow rule. The certificate only names `app.team07.test` / `api.team07.test`, not IPs, so TLS keeps working. The configs in the repo keep the 23 Nov IPs, so they match the evidence.
+
 ## Service map
 
 | Service | Host | Port | Cloud equivalent |

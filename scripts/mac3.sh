@@ -14,16 +14,11 @@ backend_kill() { pkill -f "backend_$1.py" && ok "backend ${(U)1} stopped" || inf
 pf_install() {
   mkdir -p $PFDIR
   [[ -f $PFDIR/pf.conf.backup ]] || cp /etc/pf.conf $PFDIR/pf.conf.backup
-  cp "$REPO/firewall/team07.rules" $PFDIR/team07.rules
+  render "$REPO/firewall/team07.rules" $PFDIR/team07.rules   # allows today's Mac 2 IP
   cat /etc/pf.conf $PFDIR/team07.rules > $PFDIR/pf.team07.conf
 }
 
-standby_install() {
-  [[ -f $STANDBY ]] && return
-  cp "$REPO/nginx/nginx-standby.conf" $STANDBY
-  sed -i '' "s|HOME_DIR|$HOME|g" $STANDBY
-  info "installed $STANDBY from repo"
-}
+standby_install() { render "$REPO/nginx/nginx-standby.conf" $STANDBY; }
 
 case $1 in
   start)
@@ -35,6 +30,7 @@ case $1 in
     status_all ;;
   stop)        backend_kill a; backend_kill b; dns_stop; nginx -s quit -c $STANDBY 2>/dev/null ;;
   status)      status_all ;;
+  ips)         set_ips ${@:2} ;;
   kill-a)      backend_kill a ;;               # Ext D / Phase 1 "one backend down"
   start-a)     backend_start a ;;
   kill-both)   backend_kill a; backend_kill b ;;   # Phase 1 "both down" -> 502
@@ -56,6 +52,7 @@ case $1 in
   dnslog)      tail -f $DNSLOG ;;                # Ext A: watch queries arrive at the backup
   *) cat <<'EOF'
 Mac 3 commands:
+  ips <m1> <m2> <m3>   save today's IPs if they changed (then start again)
   start          start backends A+B and backup DNS, firewall off, check everything
   status         check all 3 Macs end to end
   kill-a | start-a           stop / start backend A   (Ext D)

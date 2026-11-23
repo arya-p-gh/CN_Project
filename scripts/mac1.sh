@@ -10,6 +10,7 @@ case $1 in
     client_dns
     status_all ;;
   stop)        dns_stop ;;
+  ips)         set_ips ${@:2} ;;     # IPs changed: ips <mac1> <mac2> <mac3>
   status)      status_all ;;
   dns-down)    dns_stop; info "primary DNS is down - clients should now use the backup on Mac 3" ;;   # Ext A
   dns-up)      dns_start ;;
@@ -26,6 +27,7 @@ case $1 in
   migrate)     zsh "$REPO/scripts/extE_transition.sh" /tmp ;;   # Ext E live: old edge -> TTL -> new edge -> back
   *) cat <<'EOF'
 Mac 1 commands:
+  ips <m1> <m2> <m3>   save today's IPs if they changed (then start again)
   start      start primary DNS, use team DNS, check everything
   status     check all 3 Macs end to end
   lb         load balancing (A/B alternating)

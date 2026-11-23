@@ -3,12 +3,7 @@
 source "$(dirname "$0")/common.sh"
 CONF=$CN/nginx-edge.conf
 
-install_conf() {
-  [[ -f $CONF ]] && return
-  cp "$REPO/nginx/nginx-edge.conf" $CONF
-  sed -i '' "s|HOME_DIR|$HOME|g" $CONF
-  info "installed $CONF from repo"
-}
+install_conf() { render "$REPO/nginx/nginx-edge.conf" $CONF; }   # upstream = today's Mac 3 IP
 
 case $1 in
   start)
@@ -20,6 +15,7 @@ case $1 in
     nginx -c $CONF && ok "nginx edge running on :8443 (HTTPS) and :8080"
     client_dns
     status_all ;;
+  ips)      set_ips ${@:2} ;;
   stop)     nginx -s quit -c $CONF && ok "nginx stopped" ;;
   reload)   nginx -s reload -c $CONF && ok "nginx reloaded" ;;
   status)   status_all ;;
@@ -28,6 +24,7 @@ case $1 in
   backends) port $MAC3 3001 "backend A"; port $MAC3 3002 "backend B" ;;   # Ext C: edge is allowed
   *) cat <<'EOF'
 Mac 2 commands:
+  ips <m1> <m2> <m3>   save today's IPs if they changed (then start again)
   start     start nginx edge, use team DNS, check everything
   status    check all 3 Macs end to end
   access    live access log: client -> which backend, cache HIT/MISS
