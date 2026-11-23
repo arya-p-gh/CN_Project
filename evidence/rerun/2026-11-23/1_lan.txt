@@ -1,0 +1,17 @@
+10.7.30.40
+PING 10.7.20.12 (10.7.20.12): 56 data bytes
+64 bytes from 10.7.20.12: icmp_seq=0 ttl=64 time=7.134 ms
+64 bytes from 10.7.20.12: icmp_seq=1 ttl=64 time=37.117 ms
+64 bytes from 10.7.20.12: icmp_seq=2 ttl=64 time=36.985 ms
+
+--- 10.7.20.12 ping statistics ---
+3 packets transmitted, 3 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = 7.134/27.079/37.117/14.103 ms
+PING 10.7.30.100 (10.7.30.100): 56 data bytes
+64 bytes from 10.7.30.100: icmp_seq=0 ttl=64 time=28.282 ms
+64 bytes from 10.7.30.100: icmp_seq=1 ttl=64 time=49.086 ms
+64 bytes from 10.7.30.100: icmp_seq=2 ttl=64 time=169.122 ms
+
+--- 10.7.30.100 ping statistics ---
+3 packets transmitted, 3 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = 28.282/82.163/169.122/62.073 ms

@@ -1,0 +1,11 @@
+HTTP/2 200 
+server: nginx/1.31.6
+date: Mon, 23 Nov 2026 04:14:22 GMT
+content-type: application/json
+content-length: 32
+x-backend: A
+cache-control: max-age=60
+etag: "backend-a-v1"
+x-cache-status: MISS
+x-edge: mac2-primary
+

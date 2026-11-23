@@ -1,0 +1,11 @@
+# 2026-11-23 09:52:13 Mac 1 (10.7.30.40) -> Mac 3 backends, pf enabled on Mac 3
+nc: connectx to 10.7.30.100 port 3001 (tcp) failed: Operation timed out
+nc: connectx to 10.7.30.100 port 3002 (tcp) failed: Operation timed out
+
+# site through the edge (Mac 2) with pf on:
+x-backend: A
+x-backend: B
+x-backend: A
+x-backend: B
+x-backend: A
+x-backend: B

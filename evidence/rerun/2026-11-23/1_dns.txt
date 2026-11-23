@@ -1,0 +1,42 @@
+
+; <<>> DiG 9.10.6 <<>> app.team07.test
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44761
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;app.team07.test.		IN	A
+
+;; ANSWER SECTION:
+app.team07.test.	30	IN	A	10.7.20.12
+
+;; Query time: 3 msec
+;; SERVER: 10.7.30.40#53(10.7.30.40)
+;; WHEN: Mon Nov 23 09:43:19 IST 2026
+;; MSG SIZE  rcvd: 60
+
+
+; <<>> DiG 9.10.6 <<>> api.team07.test
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 11705
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;api.team07.test.		IN	A
+
+;; ANSWER SECTION:
+api.team07.test.	30	IN	A	10.7.20.12
+
+;; Query time: 1 msec
+;; SERVER: 10.7.30.40#53(10.7.30.40)
+;; WHEN: Mon Nov 23 09:43:19 IST 2026
+;; MSG SIZE  rcvd: 60
+
+  nameserver[0] : 10.7.30.40
+  nameserver[1] : 10.7.30.100

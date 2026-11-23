@@ -1,0 +1,62 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host app.team07.test:8443 was resolved.
+* IPv6: (none)
+* IPv4: 10.7.20.12
+*   Trying 10.7.20.12:8443...
+* Connected to app.team07.test (10.7.20.12) port 8443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [320 bytes data]
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [47 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [1137 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [264 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=app.team07.test
+*  start date: Nov 22 16:40:57 2026 GMT
+*  expire date: Nov 22 16:40:57 2027 GMT
+*  subjectAltName: host "app.team07.test" matched cert's "app.team07.test"
+*  issuer: CN=Team07 Local CA
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://app.team07.test:8443/api/status
+* [HTTP/2] [1] [:method: GET]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: app.team07.test:8443]
+* [HTTP/2] [1] [:path: /api/status]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+> GET /api/status HTTP/2
+> Host: app.team07.test:8443
+> User-Agent: curl/8.7.1
+> Accept: */*
+> 
+* Request completely sent off
+< HTTP/2 200 
+< server: nginx/1.31.6
+< date: Mon, 23 Nov 2026 04:13:19 GMT
+< content-type: application/json
+< content-length: 32
+< x-backend: B
+< cache-control: max-age=60
+< etag: "backend-b-v1"
+< x-cache-status: HIT
+< x-edge: mac2-primary
+< 
+{ [32 bytes data]
+100    32  100    32    0     0     98      0 --:--:-- --:--:-- --:--:--    98100    32  100    32    0     0     98      0 --:--:-- --:--:-- --:--:--    98
+* Connection #0 to host app.team07.test left intact
+{"backend": "B", "status": "ok"}

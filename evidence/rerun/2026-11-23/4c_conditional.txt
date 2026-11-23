@@ -1,0 +1,9 @@
+HTTP/2 304 
+server: nginx/1.31.6
+date: Mon, 23 Nov 2026 04:14:22 GMT
+x-backend: A
+cache-control: max-age=60
+etag: "backend-a-v1"
+x-cache-status: HIT
+x-edge: mac2-primary
+

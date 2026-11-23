@@ -1,0 +1,5 @@
+# 2026-11-23 09:55:28 after pf rollback on Mac 3, from Mac 1:
+Connection to 10.7.30.100 port 3001 [tcp/redwood-broker] succeeded!
+Connection to 10.7.30.100 port 3002 [tcp/exlm-agent] succeeded!
+# standby edge stopped:
+nc: connectx to 10.7.30.100 port 8443 (tcp) failed: Connection refused

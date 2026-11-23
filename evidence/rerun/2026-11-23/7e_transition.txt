@@ -1,0 +1,17 @@
+# record before: host-record=app.team07.test,10.7.20.12,30
+# client resolves + caches the old edge (TTL 30 s):
+09:52:51  x-edge: mac2-primary connected-to=10.7.20.12 
+# 09:52:51 switching app.team07.test -> 10.7.30.100 on the DNS server
+# dig (asks the server directly): 10.7.30.100
+09:52:53  x-edge: mac2-primary connected-to=10.7.20.12 
+09:52:58  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:03  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:08  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:14  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:19  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:24  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:29  x-edge: mac2-primary connected-to=10.7.20.12 
+09:53:34  x-edge: mac3-standby connected-to=10.7.30.100 
+09:53:40  x-edge: mac3-standby connected-to=10.7.30.100 
+# 09:53:45 migrating back
+09:53:46  x-edge: mac2-primary connected-to=10.7.20.12 
