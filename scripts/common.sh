@@ -90,8 +90,8 @@ status_all() {
   port $MAC3 3001 "backend A"
   port $MAC3 3002 "backend B"
   info "--- end to end"
-  local r=$(curl -s -o /dev/null -w "%{http_code} %{ssl_verify_result}" $URL/api/status)
+  local r=$(curl -s -m 8 -o /dev/null -w "%{http_code} %{ssl_verify_result}" $URL/api/status)
   [[ "$r" == "200 0" ]] && ok "https://app.team07.test:8443 -> 200, certificate verified" || bad "end-to-end result: '$r' (want '200 0')"
 }
 
-lb() { for i in 1 2 3 4 5 6; do curl -s -o /dev/null -D - $URL/ | grep -iE "x-backend" | tr -d '\r'; done; }
+lb() { for i in 1 2 3 4 5 6; do curl -s -m 5 -o /dev/null -D - $URL/ | grep -iE "x-backend" | tr -d '\r'; done; }
