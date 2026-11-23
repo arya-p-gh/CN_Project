@@ -14,8 +14,6 @@
 | Arya Pandey | 2401020012 |
 | Rishita Boisnobi | 2401010382 |
 
-> **New to the project or starting the demo?** Read [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md) (what everything does and why) and [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) (one command per laptop to start everything, then the 11 demo steps).
-
 ## Machines (Phase 2 network)
 
 All three Macs are on the same Wi-Fi, subnet `10.7.0.0/19` (mask `255.255.224.0`), gateway `10.7.0.1`, interface `en0`.
