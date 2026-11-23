@@ -49,7 +49,7 @@ case $1 in
     nginx -c $STANDBY && ok "standby edge running on $MAC3:8443 (X-Edge: mac3-standby)" ;;
   standby-off) nginx -s quit -c $STANDBY && ok "standby edge stopped" ;;
   record)      dns_record $2 ;;                  # Ext E: change the backup's record too
-  dnslog)      tail -f $DNSLOG ;;                # Ext A: watch queries arrive at the backup
+  dnslog)      dnslog ;;                # Ext A: watch queries arrive at the backup
   *) cat <<'EOF'
 Mac 3 commands:
   ips <m1> <m2> <m3>   save today's IPs if they changed (then start again)

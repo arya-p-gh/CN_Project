@@ -16,7 +16,7 @@ case $1 in
   dns-up)      dns_start ;;
   record)      dns_record $2 ;;          # Ext B / E: record mac3  |  record mac2
   flush)       flush; ok "DNS cache flushed" ;;
-  dnslog)      tail -f $DNSLOG ;;
+  dnslog)      dnslog ;;
   lb)          lb ;;                       # 6 requests, shows x-backend each time
   cache)       # Task F: MISS -> HIT -> 304
     curl -sI $URL/api/status | grep -iE "HTTP/|cache-control|etag|x-cache"

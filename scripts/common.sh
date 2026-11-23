@@ -59,6 +59,11 @@ dns_start() {
   sudo $DNSMASQ -C $CN/dnsmasq.conf --log-facility=$DNSLOG && ok "dnsmasq running (log: tail -f $DNSLOG)"
 }
 
+dnslog() {   # live DNS queries; the log file only exists if dnsmasq was started by these scripts
+  [[ -f $DNSLOG ]] || { bad "no $DNSLOG - dnsmasq was started by hand, not by the script"; info "fix: run  dns-up  (mac1.sh) or  start  (mac3.sh), then dnslog again"; return 1; }
+  tail -F $DNSLOG
+}
+
 dns_stop() { sudo killall dnsmasq 2>/dev/null && ok "dnsmasq stopped" || info "dnsmasq was not running"; }
 
 dns_record() {   # point app.team07.test at mac2 (normal) or mac3 (edge migration)
