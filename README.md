@@ -14,15 +14,17 @@
 | Arya Pandey | 2401020012 |
 | Rishita Boisnobi | 2401010382 |
 
+> **New to the project or starting the demo?** Read [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md) (what everything does and why) and [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) (one command per laptop to start everything, then the 11 demo steps).
+
 ## Machines (Phase 2 network)
 
 All three Macs are on the same Wi-Fi, subnet `10.7.0.0/19` (mask `255.255.224.0`), gateway `10.7.0.1`, interface `en0`.
 
 | Machine | Phase 1 role | Added in Phase 2 | IP |
 |---|---|---|---|
-| **Mac 1** | Primary DNS (dnsmasq) + client | - | `10.7.30.40` |
-| **Mac 2** | Edge: nginx reverse proxy, TLS termination, load balancer | Client 2, passive health checks | `10.7.20.12` |
-| **Mac 3** | Backend A `:3001`, Backend B `:3002` | Backup DNS, pf firewall, standby edge nginx | `10.7.30.100` |
+| **Mac 1** (Arya) | Primary DNS (dnsmasq) + client | - | `10.7.30.40` |
+| **Mac 2** (Divyansh) | Edge: nginx reverse proxy, TLS termination, load balancer | Client 2, passive health checks | `10.7.20.12` |
+| **Mac 3** (Rishita) | Backend A `:3001`, Backend B `:3002` | Backup DNS, pf firewall, standby edge nginx | `10.7.30.100` |
 
 The IPs changed from Phase 1 (`10.7.23.53` / `10.7.10.60` / `10.7.10.56`) because we rebuilt on a new day's DHCP leases.
 
