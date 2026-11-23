@@ -26,20 +26,31 @@
 | C | `extC_1_client_blocked_from_backends.webp` | Mac 1 → 10.7.30.100:3001/3002: `Operation timed out` |
 | C | `extC_2_edge_allowed_to_backends.jpg` | Mac 2 → 10.7.30.100:3001/3002: `succeeded` |
 | C | `extC_3_after_rollback_client_reaches_backend.webp` | After the pf rollback, Mac 1 → :3001 succeeds again |
-| D | `extD_nginx_error_and_access_logs.jpg` | nginx access log alternating 3001/3002; error log shows TLS `unknown ca` alerts from Mac 1 (troubleshooting finding #3) |
+| D | `extD_nginx_error_and_access_logs.jpg` | nginx access log alternating 3001/3002; error log shows TLS `unknown ca` alerts from Mac 1 (troubleshooting finding #3). The failover itself is in `rerun/2026-11-23/6*.txt` |
 | E | `extE_1_clients_on_standby_edge.webp` | Mac 1 after the DNS cutover: every request goes to `x-edge: mac3-standby`, `connected-to=10.7.30.100` |
 | E | `extE_2_dns_restored_and_pf_rolled_back.webp` | Records changed back to 10.7.20.12 on the DNS server, and backend port reachable again |
 | TLS | `tls_server_certificate_details.png` | Server cert: CN app.team07.test, issued by Team07 Local CA, validity, SHA-256 |
 
-## Still to capture before the final review
+## Re-run from Mac 1 after the CA fix (`rerun/2026-11-23/`)
 
-First fix the CA on Mac 1 (new CA fingerprint ends `67:93:55:35`) and the server cert on Mac 3
-(ends `71:5E:E1`). Then run `zsh scripts/mac1_evidence.sh` on Mac 1. It walks through the steps
-below and saves the output to `evidence/rerun/`.
+Captured with `scripts/mac1_evidence.sh` and `scripts/extE_transition.sh`. All of it is raw terminal output.
 
-- [ ] Ext D: curl loop showing **only `x-backend: B`** while Backend A is stopped, then A/B again after the restart
-- [ ] Ext D: nginx error log line `connect() failed (61: Connection refused) ... 10.7.30.100:3001`
-- [ ] Ext C: `sudo pfctl -sr | grep -E '3001|3002'` (rules loaded)
-- [ ] Ext E: the **transition** in one run: a few `mac2-primary` rows, then `mac3-standby` (warm the cache first)
-- [ ] Ext B: a run long enough to show the OS cache switching to the new IP after the TTL expires
-- [ ] Phase 1 re-captures on the new IPs (dig, LB loop, cache HIT/304, Wireshark pcap from Mac 3 as the client)
+| File | Shows |
+|---|---|
+| `1_lan.txt`, `1_dns.txt` | pings to Mac 2/3; dig app/api → 10.7.20.12 from SERVER 10.7.30.40; both resolvers |
+| `2_curl_verbose.txt` | full TLS handshake, `SSL certificate verify ok`, HTTP/2 200 |
+| `2_s_client.txt` | subject/issuer, TLSv1.3, `Verify return code: 0 (ok)` |
+| `3_loadbalance.txt` | A, B, A, B, A, B |
+| `4a/4b/4c_*.txt` | cache MISS → HIT → 304 Not Modified |
+| `5_extC_redo.txt` | pf on: Mac 1 → 3001/3002 timed out, site through the edge still A/B |
+| `6a_backend_a_down.txt` | Ext D: A stopped → B ×6 |
+| `6b_recovered.txt` | Ext D: A restarted → round robin back |
+| `7b_before.txt`, `7c_cutover.txt`, `7d_back.txt` | Ext E on both DNS servers: mac2 → mac3-standby ×12 → back to mac2 |
+| `7e_transition.txt` | Ext B/E: client stays on the old edge ~40 s after the DNS change, then moves |
+| `8_after_rollback.txt` | pf rolled back: 3001/3002 reachable again; standby stopped |
+
+## Optional extras
+- [ ] Ext C screenshot of `sudo pfctl -sr | grep -E '3001|3002'` on Mac 3
+- [ ] Ext D screenshot of the Mac 2 nginx error log (`connect() failed ... :3001`)
+- [ ] Wireshark pcap (only if the Phase 1 capture isn't available): `tcpdump` on Mac 3 as the client
+- [ ] Safari padlock screenshot on Mac 1

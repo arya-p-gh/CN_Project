@@ -1,7 +1,7 @@
 # Phase 2 Report: Harden, Recover, Troubleshoot
 
 **Team 07 (RAD)**: Divyansh Rathore (2401020021), Arya Pandey (2401020012), Rishita Boisnobi (2401010382)
-**Date of build/tests:** 22 November 2026
+**Date of build/tests:** 22 November 2026 (build, Ext A, B, C, E), 23 November 2026 (re-run from Mac 1 after the CA fix: TLS, caching, Ext C, D, E)
 **Setup:** 3 MacBooks on the hostel Wi-Fi (`10.7.0.0/19`)
 
 | Mac | IP | Roles |
@@ -37,6 +37,18 @@ All configs are in the repo: `dns/`, `nginx/`, `firewall/`, `tls/README.md`.
 ---
 
 ## 2. Resilience tests and results
+
+### Phase 1 baseline, re-checked on the new IPs (23 Nov, from Mac 1)
+
+| Check | Result |
+|---|---|
+| LAN | Mac 1 → Mac 2 and Mac 3: 3/3 ping replies each |
+| DNS | `app` and `api.team07.test` → `30 IN A 10.7.20.12`, `flags: qr aa`, `SERVER: 10.7.30.40`; resolvers `10.7.30.40`, `10.7.30.100` |
+| TLS | `SSL certificate verify ok`, TLSv1.3, HTTP/2 200; issuer `CN=Team07 Local CA`; `Verify return code: 0 (ok)` |
+| Load balancing | A, B, A, B, A, B |
+| Caching | `x-cache-status: MISS` → `HIT`; with `If-None-Match: "backend-a-v1"` → **`HTTP/2 304`**; `cache-control: max-age=60` |
+
+Evidence: `evidence/rerun/2026-11-23/1_*` to `4c_*`
 
 ### Ext A: Backup DNS resolver
 
@@ -88,10 +100,16 @@ Extension E, after the cache expired, the clients did move to the new IP.
 Then, after changing the record and running `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`,
 the next lookup immediately returned the record's current value.
 
+**Second run (23 Nov, Mac 1, with the switch captured).** The client resolved and cached the
+old edge at 09:52:51, and the record was changed at the same second. `dig` returned the new IP
+immediately, but the client kept connecting to `10.7.20.12` until 09:53:29, and first reached
+`10.7.30.100` at 09:53:34. That's a gap of roughly 40 s: the 30 s TTL plus our 5 s polling
+interval. (This is the same run as the Ext E transition below.)
+
 **Result: pass.** `dig` bypasses the OS cache, so it always shows what the server says now.
 `dscacheutil`, curl and Safari go through mDNSResponder and its cache.
 
-Evidence: `evidence/phase2/extB_*`
+Evidence: `evidence/phase2/extB_*`, `evidence/rerun/2026-11-23/7e_transition.txt`
 
 ### Ext C: Service isolation (pf on Mac 3)
 
@@ -101,15 +119,14 @@ Evidence: `evidence/phase2/extB_*`
 |---|---|
 | Mac 1 (client) | `Operation timed out` (both ports) |
 | Mac 2 (edge) | `succeeded` (both ports) |
-| Mac 1 → `https://app.team07.test:8443` | *to be re-captured*: during the run Mac 1 still trusted the old CA, so its HTTPS requests failed at TLS (finding #3) |
+| Mac 1 → `https://app.team07.test:8443` (pf on, 23 Nov 09:52) | served normally, `x-backend` A, B, A, B, A, B |
 | Mac 1, after `pfctl -f /etc/pf.conf; pfctl -d` | `succeeded` again (rollback works) |
 
-**Result: isolation and rollback confirmed.** The backends are only reachable from the edge, the
-way a private subnet with a security group would work. Showing the site still working through
-the edge from a client is pending the re-run. We use `drop` rather than `return`, so a blocked client gets a
-timeout and learns nothing.
+**Result: pass.** The backends are only reachable from the edge, the way a private subnet with a
+security group would work, and the public site is unaffected. We use `drop` rather than
+`return`, so a blocked client gets a timeout and learns nothing.
 
-Evidence: `evidence/phase2/extC_*`
+Evidence: `evidence/phase2/extC_*`, `evidence/rerun/2026-11-23/5_extC_redo.txt`, `8_after_rollback.txt`
 
 ### Ext D: HA failover
 
@@ -117,16 +134,16 @@ Evidence: `evidence/phase2/extC_*`
 
 **Test.**
 - Before: requests alternated A/B, and the access log showed `-> 10.7.30.100:3001` and `-> 10.7.30.100:3002` in turn (screenshot).
-- Stop Backend A on Mac 3, then loop requests from a client. Expected: every request returns
-  **200 with `X-Backend: B`**. The request that hits A first fails with connection refused, nginx
-  retries it on B, and the client never sees an error.
-- Restart A. After the 10 s `fail_timeout`, nginx should try A again and the A/B alternation should come back.
+- Before (23 Nov, Mac 1): A, B, A, B, A, B.
+- We stopped Backend A on Mac 3 (Ctrl+C). Mac 1 loop: **B, B, B, B, B, B**, all HTTP 200 and
+  no errors. The request that hit A got connection refused, nginx retried it on B
+  (`proxy_next_upstream`), and A was then marked down for 10 s.
+- We restarted A and waited 12 s. Mac 1 loop: B, B, A, B, A, B. nginx tried A again once
+  `fail_timeout` expired, and round robin resumed.
 
-**Status: re-run pending.** Our first attempt was from Mac 1 while it still trusted the old CA
-(finding #3), so the client loop failed at TLS and produced no output. We'll re-capture this from
-a client that trusts the new CA.
-
-These are passive health checks: nginx notices failures on real traffic rather than probing.
+**Result: pass.** These are passive health checks: nginx notices failures on real traffic
+rather than probing. Our first attempt on 22 Nov produced no output because Mac 1 still trusted
+the old CA (finding #3). This run was done after that fix.
 
 **Remaining single point of failure:** the nginx edge on Mac 2. If Mac 2 goes down, both healthy
 backends become unreachable, because DNS points only at Mac 2. Ways to fix it:
@@ -136,7 +153,7 @@ backends become unreachable, because DNS points only at Mac 2. Ways to fix it:
 
 Extension E is the manual, DNS-based version of this.
 
-Evidence: `evidence/phase2/extD_nginx_error_and_access_logs.jpg`
+Evidence: `evidence/rerun/2026-11-23/6a_backend_a_down.txt`, `6b_recovered.txt`, `evidence/phase2/extD_nginx_error_and_access_logs.jpg`
 
 ### Ext E: Controlled edge migration (DNS cutover)
 
@@ -153,12 +170,27 @@ The pf firewall stayed on the whole time, and the standby reached the backends o
 
 **Migrate back.** We restored the record to `10.7.20.12` on both servers and flushed the client.
 
-**Result: pass.** Traffic moved to a different edge machine without touching any client
-config. Only the DNS answer changed. The old edge has to keep running for at least one TTL after
-the switch, because clients with a cached answer will still use it. In this run the client's cache
-had already expired by the time the loop started, so every row shows the standby.
+In this first run the client's cache had already expired by the time the loop started, so every
+row shows the standby. We repeated it on 23 Nov to capture the switch itself:
 
-Evidence: `evidence/phase2/extE_*`
+**Transition run (23 Nov, Mac 1):**
+```
+09:52:51  x-edge: mac2-primary connected-to=10.7.20.12   <- client caches the old edge
+# 09:52:51 record switched to 10.7.30.100 (dig already returns the new IP)
+09:52:53 ... 09:53:29  x-edge: mac2-primary connected-to=10.7.20.12   <- cached answer still used
+09:53:34  x-edge: mac3-standby connected-to=10.7.30.100   <- TTL expired, new edge
+09:53:40  x-edge: mac3-standby connected-to=10.7.30.100
+# 09:53:45 migrated back + client cache flushed
+09:53:46  x-edge: mac2-primary connected-to=10.7.20.12
+```
+The 23 Nov main run also cut over on both DNS servers (Mac 1 and Mac 3): 12/12 requests went to
+`mac3-standby`, and after the record was restored the client was back on `mac2-primary`.
+
+**Result: pass.** Traffic moved to a different edge machine without touching any client
+config. Only the DNS answer changed. The old edge kept receiving traffic for about 40 s after
+the change, so it has to stay up for at least one TTL after a cutover.
+
+Evidence: `evidence/phase2/extE_*`, `evidence/rerun/2026-11-23/7*.txt`
 
 ### Ext F: Troubleshooting method
 
@@ -202,6 +234,21 @@ For the faculty-injected fault, we work bottom-up and say what each step rules o
    CA to Mac 1 and the new server cert to Mac 3, and check both by fingerprint before trusting
    or loading them. Lesson: verify certificates by fingerprint, not by filename.
 
+   **Resolved on 23 Nov.** The first AirDrop from Mac 2 was *also* the old CA (Mac 2 had both
+   copies). The second one, saved as `team07-ca (1).crt`, matched `...67:93:55:35`. After trusting
+   it, Mac 1 got `SSL certificate verify ok` (curl) and `Verify return code: 0 (ok)` (openssl with
+   `-CAfile`).
+
+7. **504 after the overnight restart.** The next morning Mac 1 got `HTTP/2 504` through the
+   edge. TLS and HTTP to nginx were fine, so the problem was upstream. `nc` to
+   10.7.30.100:3001 timed out: Mac 3 was switched off. Once its backends were restarted, everything
+   worked again. (A 504 means the edge timed out waiting for the backend; a 502 means the backend
+   actively refused the connection.)
+
+8. **`openssl s_client` says "unable to verify" even when curl works.** On macOS, curl uses the
+   system keychain, but openssl reads its own CA bundle. Passing `-CAfile ~/cn/tls/team07-ca.crt`
+   gives `Verify return code: 0 (ok)`.
+
 4. **`dig` vs the OS cache.** `dig` always shows the server's current answer, so it can't
    demonstrate client-side caching. For the TTL demo we used `dscacheutil -q host`, which goes
    through mDNSResponder like curl and Safari do.
@@ -233,7 +280,7 @@ blocked. Keeping a backup of `/etc/pf.conf` and a one-line rollback made it safe
 with.
 
 **Ext D (HA failover).** With passive health checks and `proxy_next_upstream`, losing one
-backend should be invisible to clients, because the failed request is simply retried on the healthy one. It also made it obvious that redundancy at one layer doesn't
+backend was invisible to clients: six requests in a row came back 200 from B while A was down. It also made it obvious that redundancy at one layer doesn't
 help if another layer (our single nginx edge) has no redundancy.
 
 **Ext E (edge migration).** You can move a whole service to new hardware by changing one DNS
