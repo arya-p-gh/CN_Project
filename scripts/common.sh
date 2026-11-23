@@ -35,7 +35,7 @@ set_ips() {   # ips <mac1> <mac2> <mac3>  - save today's IPs on this Mac
     info "using: Mac 1 $MAC1   Mac 2 $MAC2   Mac 3 $MAC3   $([[ -f $IPFILE ]] && echo "(from $IPFILE)" || echo "(repo defaults)")"
     info "to change:  ips <mac1-ip> <mac2-ip> <mac3-ip>     to go back to the repo IPs:  ips reset"
     [[ $1 == reset ]] && { rm -f $IPFILE; ok "removed $IPFILE - back to repo IPs"; }
-    return
+    return 0
   fi
   local ip; for ip in "$@"; do [[ $ip =~ '^([0-9]{1,3}\.){3}[0-9]{1,3}$' ]] || { bad "'$ip' is not an IPv4 address"; return 1; }; done
   mkdir -p $CN
