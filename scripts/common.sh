@@ -56,11 +56,13 @@ dns_conf_install() { render "$REPO/dns/dnsmasq-$1.conf" $CN/dnsmasq.conf; }   # 
 
 dns_start() {
   sudo killall dnsmasq 2>/dev/null; sleep 1
-  sudo $DNSMASQ -C $CN/dnsmasq.conf --log-facility=$DNSLOG && ok "dnsmasq running (log: tail -f $DNSLOG)"
+  sudo $DNSMASQ -C $CN/dnsmasq.conf --log-facility=$DNSLOG && ok "dnsmasq running (live log: dnslog)"
+  sleep 0.5; sudo chmod 644 $DNSLOG 2>/dev/null   # dnsmasq makes it nobody:wheel 660 - let us read it
 }
 
 dnslog() {   # live DNS queries; the log file only exists if dnsmasq was started by these scripts
   [[ -f $DNSLOG ]] || { bad "no $DNSLOG - dnsmasq was started by hand, not by the script"; info "fix: run  dns-up  (mac1.sh) or  start  (mac3.sh), then dnslog again"; return 1; }
+  [[ -r $DNSLOG ]] || { info "log is not readable yet - fixing permissions"; sudo chmod 644 $DNSLOG; }
   tail -F $DNSLOG
 }
 
