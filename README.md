@@ -90,7 +90,8 @@ back through nginx (adds X-Edge, X-Cache-Status) → client
 | `nginx/` | edge config, standby config (Phase 1 example kept) |
 | `firewall/` | pf rules for service isolation + apply/rollback steps |
 | `tls/` | how the CA and server cert were made and trusted (no keys) |
-| `evidence/` | screenshots |
+| `evidence/` | Phase 2 screenshots + raw terminal output from the 23 Nov re-run |
+| `scripts/` | evidence collection (`mac1_evidence.sh`), Ext E transition run, certificate fingerprint check |
 | [`PHASE2_REPORT.md`](PHASE2_REPORT.md) | Phase 2 final report |
 
 ## Quick start (demo day order)
